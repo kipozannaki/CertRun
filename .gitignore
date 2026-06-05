@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.py.orig
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Runtime outputs and user-supplied assets (not committed)
+certificates/
+admin/coordinates.json
+admin/*.xlsx
+admin/*.ttc
+admin/*.jpg
+admin/*.jpeg
+admin/*.png
+
+# Backups
+*.bak
+*.tmp
+*.log

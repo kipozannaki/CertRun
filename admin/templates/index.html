@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1c3783">
+    <title>完赛证书生成系统 · 管理端</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei",
+                         "Helvetica Neue", Arial, sans-serif;
+            color: #1c3783;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #eaf0fb 0%, #f7e9d3 50%, #eaf0fb 100%);
+            background-attachment: fixed;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .top-bar { height: 6px; background: linear-gradient(90deg, #1c3783 0%, #d4a64a 50%, #1c3783 100%); }
+
+        .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px 40px; }
+
+        .hero { text-align: center; margin: 12px 0 28px; }
+        .hero .badge {
+            display: inline-block; background: #1c3783; color: #fff;
+            font-size: 12px; letter-spacing: 2px; padding: 4px 12px; border-radius: 12px; margin-bottom: 10px;
+        }
+        .hero h1 { font-size: clamp(20px, 5vw, 28px); margin: 6px 0 4px; font-weight: 800; }
+        .hero p { font-size: clamp(13px, 3.5vw, 15px); color: #6b7280; margin: 0; }
+
+        /* 步骤指示 */
+        .steps-indicator {
+            display: flex; justify-content: space-between; gap: 8px;
+            margin: 20px 0; padding: 0 8px;
+        }
+        .step-ind {
+            flex: 1; text-align: center; padding: 10px 6px;
+            background: rgba(255,255,255,0.7); border-radius: 10px;
+            font-size: 13px; color: #8a93a6; position: relative;
+        }
+        .step-ind .num {
+            display: inline-block; width: 24px; height: 24px; line-height: 24px;
+            border-radius: 50%; background: #d1d8e6; color: #fff; font-weight: 700; margin-right: 6px;
+        }
+        .step-ind.active { background: #1c3783; color: #fff; }
+        .step-ind.active .num { background: #d4a64a; color: #1c3783; }
+        .step-ind.done { background: #27ae60; color: #fff; }
+        .step-ind.done .num { background: #fff; color: #27ae60; }
+
+        .card {
+            background: rgba(255, 255, 255, 0.96); border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(28, 55, 131, 0.12);
+            padding: 24px 20px; margin-bottom: 20px;
+        }
+        .card h2 {
+            margin: 0 0 6px; font-size: 18px; display: flex; align-items: center; gap: 8px;
+        }
+        .card h2 .step-num {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 28px; height: 28px; border-radius: 50%;
+            background: #1c3783; color: #fff; font-size: 14px;
+        }
+        .card .desc { color: #6b7280; font-size: 14px; margin: 0 0 16px; }
+
+        .step { display: none; }
+        .step.active { display: block; }
+
+        /* 文件上传区 */
+        .file-drop {
+            position: relative;
+            border-radius: 14px;
+            padding: 32px 16px; text-align: center;
+            background: #f8fafc; cursor: pointer;
+            transition: background-color .2s, transform .1s;
+            /* 用 SVG border-image 绘制"跟着圆角走"的虚线边框，
+               避免 dashed + border-radius 出现虚线被切断的问题 */
+            border: 2px solid transparent;
+            background-clip: padding-box;
+            border-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><path d='M0 5 H10 M5 0 V10' stroke='%23c8d3e6' stroke-width='2' stroke-dasharray='5 3' fill='none'/></svg>") 2 / 2px / 0 round;
+        }
+        .file-drop:hover, .file-drop.dragover {
+            background: #eef3fc;
+        }
+        .file-drop:hover, .file-drop.dragover {
+            border-image-source: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><path d='M0 5 H10 M5 0 V10' stroke='%231c3783' stroke-width='2' stroke-dasharray='5 3' fill='none'/></svg>");
+        }
+        .file-drop:active { transform: scale(0.998); }
+        .file-drop:focus-visible { outline: 2px solid #1c3783; outline-offset: 2px; }
+        .file-drop .ico { font-size: 36px; color: #1c3783; line-height: 1; }
+        .file-drop p { margin: 8px 0 0; color: #6b7280; font-size: 14px; }
+        .file-drop .loading-hint {
+            display: none; margin-top: 8px; color: #1c3783; font-size: 13px;
+        }
+        .file-drop.loading .loading-hint { display: block; }
+        /* 关键：file input 必须"功能可见"且占据实际布局空间，
+           Chrome/Safari 对"完全裁切/0 尺寸/display:none"的 input
+           会忽略程序 .click() 调用。
+           用 opacity:0 让 input 在视觉上看不到但仍可点击、仍占据
+           div 内部空间，用户的点击/键盘直接作用在 input 上，浏览器
+           原生弹出文件选择对话框。 */
+        .file-drop .native-input {
+            position: absolute;
+            inset: 0;
+            width: 100%; height: 100%;
+            margin: 0; padding: 0;
+            border: 0;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 2;
+        }
+        .file-info {
+            margin-top: 12px; padding: 10px 14px;
+            background: #e6f0ff; border: 1px solid #b8cdf0; border-radius: 8px;
+            color: #1c3783; font-size: 14px;
+            display: none;
+        }
+        .file-info.show { display: block; }
+        .file-info.error { background: #fff1f0; border-color: #fed7d7; color: #c53030; }
+
+        /* 画布区 */
+        .canvas-wrap {
+            position: relative; overflow: auto; max-height: 70vh;
+            background: #2c3e50; border-radius: 10px; padding: 8px;
+            text-align: center;
+        }
+        #pickCanvas {
+            display: inline-block; cursor: crosshair; max-width: 100%;
+            background: #fff; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        }
+
+        /* 提示横幅 */
+        .pick-banner {
+            display: flex; align-items: center; justify-content: center;
+            gap: 10px; padding: 12px 16px; margin-bottom: 12px;
+            background: linear-gradient(90deg, #fff3cd 0%, #ffe69c 100%);
+            border: 1px solid #f6c84d; border-radius: 8px;
+            color: #856404; font-size: 15px; font-weight: 600;
+        }
+        .pick-banner.done {
+            background: linear-gradient(90deg, #d4edda 0%, #b8e0c2 100%);
+            border-color: #82c8a0; color: #155724;
+        }
+        .pick-banner .field-tag {
+            display: inline-block; padding: 2px 10px; border-radius: 12px;
+            background: #c53030; color: #fff; font-size: 13px;
+        }
+        .pick-banner.done .field-tag { background: #28a745; }
+
+        /* 坐标摘要 */
+        .coord-summary {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+            margin-top: 12px;
+        }
+        .coord-cell {
+            padding: 10px; border-radius: 8px;
+            background: #f8fafc; border: 1px solid #e2e8f0;
+            text-align: center; font-size: 13px;
+        }
+        .coord-cell .label { color: #6b7280; font-size: 12px; }
+        .coord-cell .val { font-weight: 700; color: #1c3783; font-family: Consolas, monospace; margin-top: 4px; }
+        .coord-cell.set { background: #e6f0ff; border-color: #b8cdf0; }
+
+        /* 按钮 */
+        .btn {
+            display: inline-block; height: 44px; line-height: 44px;
+            padding: 0 24px; border: none; border-radius: 10px;
+            background: linear-gradient(135deg, #1c3783 0%, #2a4ba0 100%);
+            color: #fff; font-size: 15px; font-weight: 700; letter-spacing: 2px;
+            cursor: pointer; transition: transform .1s, box-shadow .2s, opacity .2s;
+            box-shadow: 0 4px 14px rgba(28, 55, 131, 0.3);
+            text-decoration: none;
+        }
+        .btn:hover { box-shadow: 0 6px 18px rgba(28, 55, 131, 0.4); }
+        .btn:active { transform: scale(0.98); }
+        .btn:disabled { opacity: .6; cursor: not-allowed; }
+        .btn-secondary {
+            background: #fff; color: #1c3783; border: 1.5px solid #1c3783;
+            box-shadow: none;
+        }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+
+        /* 进度 / 结果 */
+        .progress {
+            display: none; padding: 14px; margin-top: 14px;
+            background: #e6f0ff; border-radius: 8px; color: #1c3783;
+        }
+        .progress.show { display: block; }
+        .progress .bar {
+            height: 6px; background: rgba(28,55,131,0.2); border-radius: 3px; overflow: hidden; margin-top: 8px;
+        }
+        .progress .bar-fill {
+            height: 100%; background: #1c3783; width: 0;
+            transition: width .3s;
+        }
+
+        .result-section { display: none; margin-top: 14px; }
+        .result-section.show { display: block; }
+        .result-summary {
+            padding: 14px; background: #d4edda; border: 1px solid #82c8a0;
+            border-radius: 8px; color: #155724; margin-bottom: 12px;
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+        }
+        .file-list {
+            max-height: 240px; overflow-y: auto;
+            border: 1px solid #e2e8f0; border-radius: 8px; background: #fff;
+        }
+        .file-list .file-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 12px; border-bottom: 1px solid #f1f3f5;
+            font-size: 13px;
+        }
+        .file-list .file-item:last-child { border-bottom: none; }
+        .file-list .file-item .name { font-family: Consolas, monospace; flex: 1; }
+        .file-list .file-item a {
+            color: #1c3783; text-decoration: none; font-weight: 600;
+            padding: 4px 10px; border: 1px solid #1c3783; border-radius: 4px;
+        }
+        .file-list .file-item a:hover { background: #1c3783; color: #fff; }
+
+        /* Toast */
+        .toast {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            padding: 12px 20px; border-radius: 8px; font-size: 14px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 9999;
+            display: none; max-width: 90%;
+        }
+        .toast.show { display: block; animation: slideIn .3s; }
+        .toast.success { background: #d4edda; color: #155724; border: 1px solid #82c8a0; }
+        .toast.error   { background: #fff1f0; color: #c53030; border: 1px solid #fed7d7; }
+        .toast.info    { background: #e6f0ff; color: #1c3783; border: 1px solid #b8cdf0; }
+        @keyframes slideIn { from { opacity: 0; top: 0; } to { opacity: 1; top: 20px; } }
+
+        @media (max-width: 640px) {
+            .container { padding: 16px 12px 30px; }
+            .card { padding: 18px 14px; border-radius: 14px; }
+            .steps-indicator { padding: 0 4px; }
+            .step-ind { font-size: 11px; padding: 6px 4px; }
+            .step-ind .num { width: 20px; height: 20px; line-height: 20px; font-size: 12px; }
+            .coord-summary { grid-template-columns: 1fr; }
+            .btn { width: 100%; }
+            .btn-group { flex-direction: column; }
+            .btn-group .btn { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="top-bar"></div>
+
+    <div class="container">
+        <div class="hero">
+            <span class="badge">ADMIN · CERTIFICATE GENERATOR</span>
+            <h1>完赛证书生成系统</h1>
+            <p>三分步坐标拾取 · 批量生成 · 生成的证书自动写入共享目录</p>
+        </div>
+
+        <!-- 步骤指示器 -->
+        <div class="steps-indicator">
+            <div class="step-ind active" data-step="1"><span class="num">1</span>上传模板</div>
+            <div class="step-ind" data-step="2"><span class="num">2</span>拾取坐标</div>
+            <div class="step-ind" data-step="3"><span class="num">3</span>上传数据</div>
+            <div class="step-ind" data-step="4"><span class="num">4</span>生成证书</div>
+        </div>
+
+        <!-- Step 1: 上传模板 -->
+        <div class="card step active" id="step1">
+            <h2><span class="step-num">1</span>上传证书模板</h2>
+            <p class="desc">支持 PNG / JPG / JPEG / WebP 格式，建议 1492×1054 或更高分辨率</p>
+            <div class="file-drop" id="templateDrop" role="button" tabindex="0"
+                 aria-label="点击或拖拽上传证书模板">
+                <div class="ico">📄</div>
+                <p><strong>点击选择模板</strong> 或将图片拖到此处</p>
+                <p style="font-size: 12px; margin-top: 4px;">template.jpg / template.png</p>
+                <p class="loading-hint">⏳ 正在解析图片，请稍候...</p>
+                <input type="file" class="native-input" id="templateInput" accept="image/*">
+            </div>
+            <div class="file-info" id="templateInfo"></div>
+            <div class="btn-group" id="step1Actions" style="display:none">
+                <button class="btn" onclick="goToStep(2)">下一步：拾取坐标 →</button>
+            </div>
+        </div>
+
+        <!-- Step 2: 三分步坐标拾取 -->
+        <div class="card step" id="step2">
+            <h2><span class="step-num">2</span>三分步拾取坐标</h2>
+            <p class="desc">请在下方模板上<strong>按顺序点击 3 个位置</strong>：① 姓名 ② 成绩 ③ 参赛号</p>
+
+            <div class="pick-banner" id="pickBanner">
+                <span>第 <span id="currentStepNum">1</span> 步：请点击</span>
+                <span class="field-tag" id="currentFieldTag">姓名</span>
+                <span>的下划线起点</span>
+            </div>
+
+            <div class="canvas-wrap" id="canvasWrap">
+                <canvas id="pickCanvas"></canvas>
+            </div>
+
+            <div class="coord-summary">
+                <div class="coord-cell" id="cell-name">
+                    <div class="label">① 姓名</div>
+                    <div class="val">未设置</div>
+                </div>
+                <div class="coord-cell" id="cell-time">
+                    <div class="label">② 成绩</div>
+                    <div class="val">未设置</div>
+                </div>
+                <div class="coord-cell" id="cell-bib">
+                    <div class="label">③ 参赛号</div>
+                    <div class="val">未设置</div>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="resetCoords()">↺ 重新选择</button>
+                <button class="btn" id="step2NextBtn" onclick="goToStep(3)" disabled>下一步：上传数据 →</button>
+            </div>
+        </div>
+
+        <!-- Step 3: 上传 xlsx -->
+        <div class="card step" id="step3">
+            <h2><span class="step-num">3</span>上传成绩 Excel</h2>
+            <p class="desc">Excel 第 1 行为表头，从第 2 行起为数据。列顺序：<strong>姓名 | 参赛号 | 成绩</strong></p>
+            <div class="file-drop" id="xlsxDrop" role="button" tabindex="0"
+                 aria-label="点击或拖拽上传成绩 Excel">
+                <div class="ico">📊</div>
+                <p><strong>点击选择 Excel</strong> 或将文件拖到此处</p>
+                <p style="font-size: 12px; margin-top: 4px;">.xlsx 格式</p>
+                <p class="loading-hint">⏳ 正在校验文件，请稍候...</p>
+                <input type="file" class="native-input" id="xlsxInput" accept=".xlsx">
+            </div>
+            <div class="file-info" id="xlsxInfo"></div>
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="goToStep(2)">← 返回</button>
+                <button class="btn" id="step3NextBtn" onclick="goToStep(4)" disabled>下一步：生成证书 →</button>
+            </div>
+        </div>
+
+        <!-- Step 4: 生成证书 -->
+        <div class="card step" id="step4">
+            <h2><span class="step-num">4</span>批量生成证书</h2>
+            <p class="desc">点击下方按钮，根据模板 + Excel + 三分步坐标批量生成所有证书。<br>生成的证书会直接写入共享 <code>certificates/</code> 目录，客户端可立即查询。</p>
+
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="goToStep(3)">← 返回</button>
+                <button class="btn" id="generateBtn" onclick="startGenerate()">▶ 开始生成证书</button>
+            </div>
+
+            <div class="progress" id="progress">
+                <div id="progressText">正在生成证书...</div>
+                <div class="bar"><div class="bar-fill" id="progressBar"></div></div>
+            </div>
+
+            <div class="result-section" id="resultSection">
+                <div class="result-summary">
+                    <span>✅ 成功生成 <strong id="resultCount">0</strong> 张证书</span>
+                    <a class="btn" id="zipDownloadBtn" style="text-decoration:none;height:36px;line-height:36px;padding:0 16px;font-size:13px;">📦 打包下载 (ZIP)</a>
+                </div>
+                <div class="file-list" id="fileList"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const state = {
+            templateFile: null,
+            templateImage: null,
+            templateW: 0, templateH: 0,
+            displayScale: 1,
+            xlsxFile: null,
+            coords: { name: null, time: null, bib: null },
+            currentStep: 0,
+            markers: [],
+        };
+
+        const FIELDS = [
+            { key: 'name', label: '姓名',   color: '#e74c3c' },
+            { key: 'time', label: '成绩',   color: '#f39c12' },
+            { key: 'bib',  label: '参赛号', color: '#27ae60' },
+        ];
+
+        function $(id) { return document.getElementById(id); }
+        function showToast(msg, type = 'info', duration = 3000) {
+            const t = $('toast');
+            t.textContent = msg;
+            t.className = 'toast show ' + type;
+            if (duration > 0) setTimeout(() => t.className = 'toast', duration);
+        }
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+        }
+
+        function goToStep(n) {
+            if (n >= 2 && !state.templateImage) { showToast('请先上传模板', 'error'); return; }
+            if (n >= 3 && !allCoordsSet()) { showToast('请先完成 3 个坐标的拾取', 'error'); return; }
+            if (n >= 4 && !state.xlsxFile) { showToast('请先上传 Excel', 'error'); return; }
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            $('step' + n).classList.add('active');
+            document.querySelectorAll('.step-ind').forEach(ind => {
+                const step = parseInt(ind.dataset.step, 10);
+                ind.classList.remove('active', 'done');
+                if (step < n) ind.classList.add('done');
+                else if (step === n) ind.classList.add('active');
+            });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function setupDropZone(dropId, inputId, handler) {
+            const drop = $(dropId);
+            const input = $(inputId);
+
+            // 关键设计：input 用 opacity:0 覆盖整个 div（z-index:2），
+            // 用户点击/键盘聚焦都直接作用在 input 上，浏览器原生
+            // 弹出文件选择对话框，不需要 JS 模拟 click()，避免
+            // Chrome 对不可见 input 忽略 .click() 的问题。
+
+            // 拖拽支持：input 不接收 drop 事件，所以绑在 div 上
+            drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
+            drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
+            drop.addEventListener('drop', e => {
+                e.preventDefault();
+                drop.classList.remove('dragover');
+                const f = e.dataTransfer.files && e.dataTransfer.files[0];
+                if (f) handler(f);
+            });
+
+            // input.change 处理（覆盖 div 的天然效果：用户点击/键盘
+            // Enter/Space 都由浏览器直接触发 input 原生 picker）
+            input.addEventListener('change', e => {
+                const f = e.target.files && e.target.files[0];
+                if (f) handler(f);
+                // 清空 value，让"选同一文件"也能再次触发 change
+                e.target.value = '';
+            });
+        }
+
+        setupDropZone('templateDrop', 'templateInput', handleTemplate);
+        setupDropZone('xlsxDrop', 'xlsxInput', handleXlsx);
+
+        function handleTemplate(file) {
+            if (!file.type.startsWith('image/')) {
+                showToast('请选择图片文件', 'error'); return;
+            }
+            const drop = $('templateDrop');
+            const info = $('templateInfo');
+
+            // 立即清空旧状态 + 显示加载中，防止用户看到"已加载"的旧模板
+            state.templateFile = null;
+            state.templateImage = null;
+            state.templateW = 0;
+            state.templateH = 0;
+            state.markerCount = 0;
+            drop.classList.add('loading');
+            info.className = 'file-info';
+            info.textContent = '';
+            $('step1Actions').style.display = 'none';
+
+            state.templateFile = file;
+            const reader = new FileReader();
+            reader.onerror = () => {
+                drop.classList.remove('loading');
+                info.className = 'file-info show error';
+                info.textContent = '❌ 读取文件失败：' + (reader.error || '未知错误');
+                showToast('读取模板失败', 'error');
+            };
+            reader.onload = e => {
+                const img = new Image();
+                img.onerror = () => {
+                    drop.classList.remove('loading');
+                    info.className = 'file-info show error';
+                    info.textContent = '❌ 图片解析失败，请检查文件是否完整';
+                    showToast('图片解析失败', 'error');
+                };
+                img.onload = () => {
+                    state.templateImage = img;
+                    state.templateW = img.width;
+                    state.templateH = img.height;
+                    drop.classList.remove('loading');
+                    info.className = 'file-info show';
+                    info.innerHTML = `✓ 已加载 <strong>${file.name}</strong> （原图 ${img.width} × ${img.height}，${formatSize(file.size)}）`;
+                    $('step1Actions').style.display = 'flex';
+                    showToast('模板加载完成', 'success', 1500);
+                    setupCanvas();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function setupCanvas() {
+            const canvas = $('pickCanvas');
+            const ctx = canvas.getContext('2d');
+            const maxW = Math.min(window.innerWidth - 60, 1000);
+            const maxH = window.innerHeight * 0.6;
+            const scale = Math.min(maxW / state.templateW, maxH / state.templateH, 1);
+            state.displayScale = scale;
+            const dw = Math.round(state.templateW * scale);
+            const dh = Math.round(state.templateH * scale);
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = dw * dpr;
+            canvas.height = dh * dpr;
+            canvas.style.width = dw + 'px';
+            canvas.style.height = dh + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.imageSmoothingEnabled = true;
+            ctx.clearRect(0, 0, dw, dh);
+            ctx.drawImage(state.templateImage, 0, 0, dw, dh);
+        }
+
+        $('pickCanvas').addEventListener('click', e => {
+            if (state.currentStep >= FIELDS.length) return;
+            const canvas = e.currentTarget;
+            const rect = canvas.getBoundingClientRect();
+            const displayX = e.clientX - rect.left;
+            const displayY = e.clientY - rect.top;
+            const origX = Math.round(displayX / state.displayScale);
+            const origY = Math.round(displayY / state.displayScale);
+            const field = FIELDS[state.currentStep];
+            state.coords[field.key] = { x: origX, y: origY };
+            drawMarker(displayX, displayY, state.currentStep + 1, field.label, field.color);
+            state.currentStep++;
+            updatePickUI();
+        });
+
+        function drawMarker(x, y, num, label, color) {
+            const ctx = $('pickCanvas').getContext('2d');
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, 10, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, 4, 0, Math.PI * 2);
+            ctx.fill();
+            const origX = Math.round(x / state.displayScale);
+            const origY = Math.round(y / state.displayScale);
+            ctx.font = 'bold 13px sans-serif';
+            ctx.fillStyle = color;
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 4;
+            const text = `${num}.${label}(${origX},${origY})`;
+            ctx.strokeText(text, x + 14, y - 12);
+            ctx.fillText(text, x + 14, y - 12);
+        }
+
+        function updatePickUI() {
+            const banner = $('pickBanner');
+            if (state.currentStep < FIELDS.length) {
+                const next = FIELDS[state.currentStep];
+                $('currentStepNum').textContent = state.currentStep + 1;
+                $('currentFieldTag').textContent = next.label;
+            } else {
+                banner.classList.add('done');
+                $('currentStepNum').textContent = '✓';
+                $('currentFieldTag').textContent = '完成';
+                $('step2NextBtn').disabled = false;
+            }
+            FIELDS.forEach(f => {
+                const cell = $('cell-' + f.key);
+                if (state.coords[f.key]) {
+                    cell.classList.add('set');
+                    cell.querySelector('.val').textContent =
+                        `(${state.coords[f.key].x}, ${state.coords[f.key].y})`;
+                }
+            });
+        }
+
+        function resetCoords() {
+            state.coords = { name: null, time: null, bib: null };
+            state.currentStep = 0;
+            setupCanvas();
+            $('pickBanner').classList.remove('done');
+            $('currentStepNum').textContent = '1';
+            $('currentFieldTag').textContent = '姓名';
+            $('step2NextBtn').disabled = true;
+            FIELDS.forEach(f => {
+                const cell = $('cell-' + f.key);
+                cell.classList.remove('set');
+                cell.querySelector('.val').textContent = '未设置';
+            });
+            showToast('已重置坐标', 'info');
+        }
+
+        function allCoordsSet() {
+            return state.coords.name && state.coords.time && state.coords.bib;
+        }
+
+        function handleXlsx(file) {
+            if (!file.name.toLowerCase().endsWith('.xlsx')) {
+                showToast('请选择 .xlsx 格式的 Excel 文件', 'error'); return;
+            }
+            const drop = $('xlsxDrop');
+            const info = $('xlsxInfo');
+            state.xlsxFile = null;
+            drop.classList.add('loading');
+            info.className = 'file-info';
+            info.textContent = '';
+            $('step3NextBtn').disabled = true;
+
+            state.xlsxFile = file;
+            drop.classList.remove('loading');
+            info.className = 'file-info show';
+            info.innerHTML = `✓ 已选择 <strong>${file.name}</strong>（${formatSize(file.size)}）`;
+            $('step3NextBtn').disabled = false;
+            showToast('Excel 校验通过', 'success', 1500);
+        }
+
+        async function startGenerate() {
+            if (!state.templateFile || !state.xlsxFile || !allCoordsSet()) {
+                showToast('请完成前面所有步骤', 'error'); return;
+            }
+            const btn = $('generateBtn');
+            btn.disabled = true;
+            btn.textContent = '生成中...';
+            $('progress').classList.add('show');
+            $('resultSection').classList.remove('show');
+            $('progressBar').style.width = '20%';
+            $('progressText').textContent = '正在上传文件并生成证书...';
+
+            const fd = new FormData();
+            fd.append('template', state.templateFile);
+            fd.append('xlsx', state.xlsxFile);
+            fd.append('name_x', state.coords.name.x);
+            fd.append('name_y', state.coords.name.y);
+            fd.append('time_x', state.coords.time.x);
+            fd.append('time_y', state.coords.time.y);
+            fd.append('bib_x',  state.coords.bib.x);
+            fd.append('bib_y',  state.coords.bib.y);
+
+            try {
+                $('progressBar').style.width = '50%';
+                const resp = await fetch('/api/generate', { method: 'POST', body: fd });
+                $('progressBar').style.width = '80%';
+                const data = await resp.json();
+                if (!resp.ok || !data.ok) {
+                    throw new Error(data.msg || `HTTP ${resp.status}`);
+                }
+                $('progressBar').style.width = '100%';
+                $('progressText').textContent = `生成完成，共 ${data.count} 张证书`;
+                showResult(data);
+                showToast(`✅ 成功生成 ${data.count} 张证书`, 'success');
+            } catch (err) {
+                showToast('生成失败：' + err.message, 'error');
+                $('progressText').textContent = '生成失败：' + err.message;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '▶ 重新生成证书';
+            }
+        }
+
+        function showResult(data) {
+            $('resultSection').classList.add('show');
+            $('resultCount').textContent = data.count;
+            $('zipDownloadBtn').href = data.zip_url;
+
+            const list = $('fileList');
+            list.innerHTML = '';
+            data.files.forEach(f => {
+                const item = document.createElement('div');
+                item.className = 'file-item';
+                item.innerHTML = `
+                    <span class="name">${f.name}</span>
+                    <a href="${f.url}" download="${f.name}">下载</a>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        window.addEventListener('resize', () => {
+            if (state.templateImage) setupCanvas();
+        });
+    </script>
+</body>
+</html>

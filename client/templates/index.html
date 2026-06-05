@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1c3783">
+    <title>2026 运城学院迷你马拉松 · 完赛证书查询</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei",
+                         "Helvetica Neue", Arial, sans-serif;
+            color: #1c3783;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #eaf0fb 0%, #f7e9d3 50%, #eaf0fb 100%);
+            background-attachment: fixed;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .top-bar { height: 6px; background: linear-gradient(90deg, #1c3783 0%, #d4a64a 50%, #1c3783 100%); }
+
+        .container { max-width: 720px; margin: 0 auto; padding: 24px 16px 40px; }
+
+        .hero { text-align: center; margin: 20px 0 28px; }
+        .hero .badge {
+            display: inline-block; background: #1c3783; color: #fff;
+            font-size: 12px; letter-spacing: 2px; padding: 4px 12px;
+            border-radius: 12px; margin-bottom: 10px;
+        }
+        .hero h1 {
+            font-size: clamp(20px, 5vw, 28px); margin: 6px 0 4px;
+            font-weight: 800; color: #1c3783;
+        }
+        .hero .subtitle {
+            font-size: clamp(13px, 3.5vw, 15px); color: #6b7280; margin: 0;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.96); border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(28, 55, 131, 0.12);
+            padding: 24px 20px; margin-bottom: 20px;
+        }
+
+        .form-row { margin-bottom: 16px; }
+        .form-row label {
+            display: block; font-size: 14px; color: #1c3783;
+            font-weight: 600; margin-bottom: 6px;
+        }
+        .form-row input {
+            width: 100%; height: 44px; font-size: 16px;
+            padding: 0 14px; border: 1.5px solid #d4dbed;
+            border-radius: 10px; background: #f8fafc; color: #1c3783;
+            outline: none; transition: border-color .2s, box-shadow .2s;
+        }
+        .form-row input:focus {
+            border-color: #1c3783; background: #fff;
+            box-shadow: 0 0 0 3px rgba(28, 55, 131, 0.12);
+        }
+        .form-row input::placeholder { color: #a0a8b8; }
+
+        .btn {
+            display: block; width: 100%; height: 48px;
+            border: none; border-radius: 10px;
+            background: linear-gradient(135deg, #1c3783 0%, #2a4ba0 100%);
+            color: #fff; font-size: 16px; font-weight: 700; letter-spacing: 4px;
+            cursor: pointer; transition: transform .1s, box-shadow .2s, opacity .2s;
+            box-shadow: 0 4px 14px rgba(28, 55, 131, 0.3);
+        }
+        .btn:hover { box-shadow: 0 6px 18px rgba(28, 55, 131, 0.4); }
+        .btn:active { transform: scale(0.98); }
+        .btn:disabled { opacity: .6; cursor: not-allowed; }
+
+        .toast {
+            text-align: center; font-size: 14px;
+            padding: 10px 14px; border-radius: 8px; margin-top: 12px;
+            display: none;
+        }
+        .toast.show { display: block; }
+        .toast.error { background: #fff1f0; color: #c53030; border: 1px solid #fed7d7; }
+        .toast.info  { background: #e6f0ff; color: #1c3783; border: 1px solid #b8cdf0; }
+
+        .spinner {
+            display: none; width: 22px; height: 22px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: #fff; border-radius: 50%;
+            animation: spin 0.8s linear infinite; margin: 0 auto;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .result-card { display: none; }
+        .result-card.show { display: block; }
+        .result-card h2 {
+            margin: 0 0 14px; text-align: center;
+            color: #1c3783; font-size: 18px;
+        }
+        .cert-wrapper {
+            background: #f8fafc; border: 1px dashed #c8d3e6;
+            border-radius: 12px; padding: 10px; text-align: center;
+        }
+        .cert-wrapper img {
+            max-width: 100%; height: auto; border-radius: 6px;
+            display: block; margin: 0 auto;
+        }
+
+        .actions { display: flex; gap: 10px; margin-top: 14px; }
+        .actions .btn-small {
+            flex: 1; height: 40px; line-height: 38px;
+            border-radius: 8px; border: 1.5px solid #1c3783;
+            background: #fff; color: #1c3783; text-align: center;
+            font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer;
+        }
+        .actions .btn-small.primary { background: #1c3783; color: #fff; }
+
+        .footer {
+            text-align: center; color: #8a93a6;
+            font-size: 12px; margin-top: 24px;
+        }
+        .footer .motto {
+            color: #1c3783; font-weight: 700; letter-spacing: 2px; margin-bottom: 4px;
+        }
+
+        @media (max-width: 480px) {
+            .container { padding: 16px 12px 30px; }
+            .card { padding: 20px 16px; border-radius: 14px; }
+            .hero { margin: 12px 0 20px; }
+        }
+
+        @media (min-width: 768px) {
+            .form-grid {
+                display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+            }
+            .form-grid .form-row { margin-bottom: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="top-bar"></div>
+
+    <div class="container">
+        <div class="hero">
+            <span class="badge">CERTIFICATE OF COMPLETION</span>
+            <h1>2026 运城学院迷你马拉松</h1>
+            <p class="subtitle">完赛证书查询 · 输入信息即刻领取</p>
+        </div>
+
+        <div class="card">
+            <form id="searchForm" autocomplete="off">
+                <div class="form-grid">
+                    <div class="form-row">
+                        <label for="name">姓 名</label>
+                        <input type="text" id="name" name="name"
+                               placeholder="请输入您的姓名" maxlength="20" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="bib">参 赛 号</label>
+                        <input type="text" id="bib" name="bib"
+                               placeholder="如：10001" inputmode="numeric"
+                               pattern="[0-9]*" maxlength="10" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn" id="submitBtn">
+                    <span id="btnText">查 询 完 赛 证 书</span>
+                    <div class="spinner" id="spinner"></div>
+                </button>
+                <div class="toast" id="toast"></div>
+            </form>
+        </div>
+
+        <div class="card result-card" id="resultCard">
+            <h2 id="resultTitle">您的完赛证书</h2>
+            <div class="cert-wrapper">
+                <img id="certImg" src="" alt="完赛证书">
+            </div>
+            <div class="actions">
+                <a class="btn-small" id="downloadBtn" download>下载证书</a>
+                <a class="btn-small primary" id="newQueryBtn">查询其他</a>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="motto">挑战自我 · 超越极限</div>
+            <div>© 2026 运城学院迷你马拉松组委会</div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('searchForm');
+        const nameInput = document.getElementById('name');
+        const bibInput = document.getElementById('bib');
+        const submitBtn = document.getElementById('submitBtn');
+        const btnText = document.getElementById('btnText');
+        const spinner = document.getElementById('spinner');
+        const toast = document.getElementById('toast');
+        const resultCard = document.getElementById('resultCard');
+        const certImg = document.getElementById('certImg');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const newQueryBtn = document.getElementById('newQueryBtn');
+
+        function showToast(msg, type = 'error') {
+            toast.textContent = msg;
+            toast.className = 'toast show ' + type;
+        }
+        function hideToast() { toast.className = 'toast'; }
+        function setLoading(loading) {
+            submitBtn.disabled = loading;
+            btnText.style.display = loading ? 'none' : 'inline';
+            spinner.style.display = loading ? 'block' : 'none';
+        }
+
+        let lastSubmitAt = 0;            // 上次提交时间戳（ms），用于防抖
+        const SUBMIT_DEBOUNCE_MS = 500;  // 500ms 内的重复提交直接忽略
+        const SUBMIT_COOLDOWN_MS = 1200; // 提交后冷却时间，期间不允许再提交
+        let currentController = null;    // 当前进行中的请求控制器，用于取消上一次
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const now = Date.now();
+            // 双重防抖：500ms 内重复提交 + 上一次请求完成前的冷却
+            if (now - lastSubmitAt < SUBMIT_DEBOUNCE_MS) return;
+            if (submitBtn.disabled) return;
+            lastSubmitAt = now;
+
+            hideToast();
+            resultCard.classList.remove('show');
+
+            const name = nameInput.value.trim();
+            const bib = bibInput.value.trim();
+            if (!name || !bib) {
+                showToast('请填写姓名和参赛号', 'error');
+                return;
+            }
+
+            setLoading(true);
+            // 用 AbortController 让"用户连点"时取消上一次未完成的请求
+            const controller = new AbortController();
+            if (currentController) currentController.abort();
+            currentController = controller;
+            try {
+                const url = `/api/certificate?name=${encodeURIComponent(name)}&bib=${encodeURIComponent(bib)}&t=${Date.now()}`;
+                const resp = await fetch(url, { signal: controller.signal });
+                if (resp.ok) {
+                    const blob = await resp.blob();
+                    const objectUrl = URL.createObjectURL(blob);
+                    certImg.src = objectUrl;
+                    downloadBtn.href = objectUrl;
+                    downloadBtn.download = `${bib}_${name}_完赛证书.png`;
+                    resultCard.classList.add('show');
+                    resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } else {
+                    let msg = '查询失败，请稍后重试';
+                    try {
+                        const data = await resp.json();
+                        msg = data.msg || msg;
+                    } catch (_) {}
+                    showToast(msg, 'error');
+                }
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    // 上一次请求被新请求取消，静默忽略
+                } else {
+                    showToast('网络异常，请检查连接', 'error');
+                }
+            } finally {
+                // 冷却期内不允许再次提交，避免用户连点造成服务端压力
+                if (currentController === controller) {
+                    setLoading(false);
+                    currentController = null;
+                    setTimeout(() => { lastSubmitAt = 0; }, SUBMIT_COOLDOWN_MS);
+                }
+            }
+        });
+
+        newQueryBtn.addEventListener('click', () => {
+            resultCard.classList.remove('show');
+            if (certImg.src) URL.revokeObjectURL(certImg.src);
+            certImg.src = '';
+            nameInput.value = '';
+            bibInput.value = '';
+            hideToast();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            nameInput.focus();
+        });
+
+        bibInput.addEventListener('input', () => {
+            bibInput.value = bibInput.value.replace(/\D/g, '');
+        });
+    </script>
+</body>
+</html>
